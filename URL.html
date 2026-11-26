@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing & Malicious URL Detector</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">PhishShield AI</h1>
+                    <p class="text-xs text-slate-400">BCA Minor Project | URL Security Scanner</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>System Online</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Input Form & Results Card -->
+        <section class="lg:col-span-2 space-y-6">
+            
+            <!-- URL Input Card -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 shadow-xl">
+                <h2 class="text-xl font-bold text-white mb-2 flex items-center">
+                    <i class="fa-solid fa-magnifying-glass text-blue-400 mr-2 text-base"></i> URL Scanner
+                </h2>
+                <p class="text-slate-400 text-sm mb-4">Enter any web address to check for phishing indicators and lexical threat patterns.</p>
+                
+                <div class="space-y-4">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-link"></i>
+                        </div>
+                        <input type="text" id="urlInput" 
+                            class="w-full pl-10 pr-28 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition"
+                            placeholder="https://example.com/login">
+                        <button type="button" onclick="handleScan()"
+                            class="absolute right-1 top-1 bottom-1 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md text-sm transition flex items-center shadow cursor-pointer">
+                            <span>Scan</span>
+                            <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Feedback Message -->
+                <p id="errorMsg" class="text-xs text-red-400 mt-2 hidden"></p>
+
+                <!-- Quick Samples -->
+                <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                    <span>Try sample:</span>
+                    <button onclick="setSample('https://www.google.com')" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-slate-300">Safe: Google</button>
+                    <button onclick="setSample('http://192.168.1.1/secure-login/bank')" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-slate-300">Phishing: Raw IP</button>
+                    <button onclick="setSample('http://login-paypal-verify.com@badsite.ru')" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-slate-300">Phishing: @ Symbol</button>
+                    <button onclick="setSample('http://paypa1-secure-login.xyz/verify')" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-slate-300">Phishing: Brand Look-alike</button>
+                </div>
+            </div>
+
+            <!-- Analysis Result Dashboard (Hidden by default) -->
+            <div id="resultCard" class="hidden bg-slate-800 rounded-xl border border-slate-700 p-6 shadow-xl transition-all">
+                
+                <!-- Status Header -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 mb-6 border-b border-slate-700 gap-4">
+                    <div>
+                        <span id="badgeStatus" class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2"></span>
+                        <h3 id="resultTitle" class="text-xl font-bold text-white"></h3>
+                        <p id="scannedUrlText" class="text-xs text-slate-400 break-all mt-1"></p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-white" id="riskScoreText">0%</div>
+                        <div class="text-xs text-slate-400">Phishing Risk Score</div>
+                    </div>
+                </div>
+
+                <!-- Feature Breakdown -->
+                <h4 class="text-sm font-semibold text-slate-300 mb-3 flex items-center">
+                    <i class="fa-solid fa-microchip text-blue-400 mr-2"></i> Heuristic Feature Analysis
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6" id="featuresGrid"></div>
+
+                <!-- Score Explanation -->
+                <h4 class="text-sm font-semibold text-slate-300 mb-3 flex items-center">
+                    <i class="fa-solid fa-list-check text-blue-400 mr-2"></i> Why this score?
+                </h4>
+                <ul id="reasonsList" class="mb-6 space-y-1.5 text-xs text-slate-300 bg-slate-900/60 border border-slate-700/60 rounded-lg p-3"></ul>
+
+                <!-- Recommendation Notice -->
+                <div id="recommendationBox" class="p-4 rounded-lg text-sm border flex items-start space-x-3">
+                    <i class="fa-solid fa-circle-info text-lg mt-0.5" id="recommendationIcon"></i>
+                    <div>
+                        <div class="font-semibold" id="recommendationTitle">Security Advice</div>
+                        <div class="text-xs mt-1" id="recommendationText"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Right Column: Scan History & Stats -->
+        <section class="space-y-6">
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                    <div class="text-2xl font-bold text-blue-400" id="totalScansCount">0</div>
+                    <div class="text-xs text-slate-400 mt-1">Total Scans</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                    <div class="text-2xl font-bold text-red-400" id="threatsFoundCount">0</div>
+                    <div class="text-xs text-slate-400 mt-1">Threats Detected</div>
+                </div>
+            </div>
+
+            <!-- Scan History Log -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-white flex items-center">
+                        <i class="fa-solid fa-database text-slate-400 mr-2 text-sm"></i> Scan History Log
+                    </h3>
+                    <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-400 transition">
+                        Clear Log
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-slate-400 bg-slate-900/50 uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="p-2">Target URL</th>
+                                <th class="p-2 text-right">Verdict</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800/40 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        BCA Minor Project &bull; Phishing URL Detection System
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // ---------- Storage (safe parsing) ----------
+        function loadJSON(key, fallback) {
+            try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }
+            catch (e) { return fallback; }
+        }
+        let scanHistory = loadJSON('phish_scan_history', []);
+        if (!Array.isArray(scanHistory)) scanHistory = [];
+        let totalScans = Number(loadJSON('phish_total_scans', 0)) || 0;
+        let totalThreats = Number(loadJSON('phish_total_threats', 0)) || 0;
+
+        // ---------- Detection data ----------
+        const KEYWORDS = ['login', 'signin', 'verify', 'secure', 'account', 'update', 'bank', 'confirm', 'password', 'wallet', 'billing', 'suspend'];
+        const SUSPICIOUS_TLDS = ['xyz', 'top', 'tk', 'ml', 'ga', 'cf', 'gq', 'click', 'link', 'zip', 'work', 'support', 'loan'];
+        const SHORTENERS = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'cutt.ly', 'rb.gy'];
+        const BRANDS = ['paypal', 'google', 'amazon', 'microsoft', 'apple', 'facebook', 'netflix', 'instagram', 'paytm', 'hdfc', 'icici'];
+        const BRAND_ALLOWLIST = ['amazonaws.com', 'googleusercontent.com', 'googleapis.com'];
+        // Demo blacklist: replace/extend with an open feed (e.g. PhishTank CSV)
+        const BLACKLIST = ['badsite.ru', 'evil-login.tk', 'secure-paypal-update.xyz'];
+        const SECOND_LEVEL = ['co', 'com', 'org', 'net', 'gov', 'ac', 'edu'];
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function shannonEntropy(str) {
+            if (!str) return 0;
+            const freq = {};
+            for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
+            return -Object.values(freq).reduce((s, n) => s + (n / str.length) * Math.log2(n / str.length), 0);
+        }
+
+        function deLeet(s) {
+            return s.replace(/[01345$]/g, c => ({ '0': 'o', '1': 'l', '3': 'e', '4': 'a', '5': 's', '$': 's' }[c]));
+        }
+
+        // ---------- Feature extraction ----------
+        function extractFeatures(rawUrl) {
+            let processedUrl = rawUrl.trim();
+            const typedScheme = /^https?:\/\//i.test(processedUrl);
+            if (!typedScheme) processedUrl = 'http://' + processedUrl;
+
+            let parsedObj;
+            try { parsedObj = new URL(processedUrl); } catch (e) { return { isValid: false }; }
+
+            const hostname = (parsedObj.hostname || '').toLowerCase();
+            const isIPv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+            const isIP = isIPv4 || hostname.startsWith('[');
+            const isLocalhost = hostname === 'localhost';
+            if (!hostname.includes('.') && !isIP && !isLocalhost) return { isValid: false };
+
+            const labels = hostname.split('.');
+            const twoPartTld = labels.length >= 3 && labels[labels.length - 1].length === 2 && SECOND_LEVEL.includes(labels[labels.length - 2]);
+            const regIndex = labels.length - (twoPartTld ? 3 : 2);
+            const regLabel = isIP ? '' : (labels[regIndex] || '');
+            const registeredDomain = isIP ? hostname : labels.slice(Math.max(regIndex, 0)).join('.');
+            const tld = labels[labels.length - 1];
+            const subdomainCount = isIP ? 0 : Math.max(0, regIndex);
+
+            const lowerUrl = rawUrl.toLowerCase();
+            const keywordsFound = KEYWORDS.filter(k => lowerUrl.includes(k));
+
+            const hostNorm = deLeet(hostname);
+            const brandMisuse = isIP ? null : (BRANDS.find(b =>
+                hostNorm.includes(b) && regLabel !== b && !BRAND_ALLOWLIST.includes(registeredDomain)) || null);
+
+            return {
+                isValid: true,
+                length: rawUrl.trim().length,
+                hasAt: rawUrl.includes('@'),
+                doubleSlash: rawUrl.trim().replace(/^https?:\/\//i, '').includes('//'),
+                hasHyphen: hostname.includes('-'),
+                isHttp: typedScheme && parsedObj.protocol === 'http:',
+                dotCount: (hostname.match(/\./g) || []).length,
+                subdomainCount,
+                isIP,
+                keywordsFound,
+                suspiciousTld: !isIP && SUSPICIOUS_TLDS.includes(tld),
+                isShortener: SHORTENERS.includes(hostname) || SHORTENERS.includes(registeredDomain),
+                hasPunycode: hostname.includes('xn--'),
+                brandMisuse,
+                entropy: shannonEntropy(regLabel),
+                highEntropy: regLabel.length >= 8 && shannonEntropy(regLabel) > 3.3,
+                blacklisted: BLACKLIST.some(d => hostname === d || hostname.endsWith('.' + d))
+            };
+        }
+
+        // ---------- Classification (explainable scoring) ----------
+        function classifyUrl(f) {
+            if (!f.isValid) return { isValid: false };
+            const reasons = [];
+            const add = (pts, text) => reasons.push({ pts, text });
+
+            if (f.blacklisted) add(80, 'Domain found in local blacklist');
+            if (f.isIP) add(40, 'Host is a raw IP address');
+            if (f.hasAt) add(35, "Contains '@' (can hide the real destination)");
+            if (f.brandMisuse) add(35, `Imitates brand "${f.brandMisuse}" on an unrelated domain`);
+            if (f.hasPunycode) add(30, 'Punycode (xn--) domain, possible look-alike characters');
+            if (f.suspiciousTld) add(20, 'Uncommon TLD often abused for phishing');
+            if (f.doubleSlash) add(20, "Extra '//' in the path (possible redirection)");
+            if (f.keywordsFound.length) add(Math.min(f.keywordsFound.length, 2) * 10, `Sensitive keywords: ${f.keywordsFound.join(', ')}`);
+            if (f.isShortener) add(15, 'URL shortener hides the final destination');
+            if (f.highEntropy) add(15, 'Domain name looks random (high entropy)');
+            if (f.subdomainCount >= 3) add(15, `Many subdomains (${f.subdomainCount})`);
+            else if (f.dotCount > 3) add(10, 'Many dots in hostname');
+            if (f.isHttp) add(15, 'Uses insecure HTTP');
+            if (f.length > 75) add(20, 'Very long URL');
+            else if (f.length > 54) add(10, 'Long URL');
+            if (f.hasHyphen) add(10, 'Hyphen in domain name');
+
+            const riskScore = Math.min(100, reasons.reduce((s, r) => s + r.pts, 0));
+            const verdict = riskScore >= 40 ? 'Phishing' : riskScore >= 20 ? 'Suspicious' : 'Clean';
+            return { isValid: true, riskScore, verdict, reasons };
+        }
+
+        // ---------- UI ----------
+        const VERDICT_UI = {
+            Phishing: {
+                badge: 'bg-red-500/20 text-red-400 border border-red-500/30', badgeText: 'Malicious / Phishing',
+                title: '⚠️ High Threat Level Detected',
+                box: 'border-red-500/30 bg-red-950/20 text-red-300', icon: 'fa-triangle-exclamation text-red-400',
+                recTitle: 'Security Warning',
+                rec: 'Do not enter credentials or personal details on this link. It exhibits common patterns used in phishing and credential harvesting.'
+            },
+            Suspicious: {
+                badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', badgeText: 'Suspicious',
+                title: '⚠️ Some Suspicious Patterns Found',
+                box: 'border-amber-500/30 bg-amber-950/20 text-amber-300', icon: 'fa-circle-exclamation text-amber-400',
+                recTitle: 'Proceed With Caution',
+                rec: 'This link shows a few warning signs. Verify the sender and type the official address yourself before entering any details.'
+            },
+            Clean: {
+                badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', badgeText: 'No Threats Flagged',
+                title: '✅ No Suspicious Patterns Found',
+                box: 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300', icon: 'fa-circle-check text-emerald-400',
+                recTitle: 'No Red Flags',
+                rec: 'No heuristic phishing indicators were flagged. This is not a guarantee of safety, so standard browsing precautions still apply.'
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            document.getElementById('urlInput').addEventListener('keypress', e => {
+                if (e.key === 'Enter') { e.preventDefault(); handleScan(); }
+            });
+        });
+
+        function setSample(url) {
+            document.getElementById('urlInput').value = url;
+            handleScan();
+        }
+
+        function handleScan() {
+            const errorMsg = document.getElementById('errorMsg');
+            const resultCard = document.getElementById('resultCard');
+            const urlInput = document.getElementById('urlInput').value.trim();
+
+            errorMsg.classList.add('hidden');
+            if (!urlInput) {
+                errorMsg.textContent = 'Please enter a URL to scan.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const f = extractFeatures(urlInput);
+            if (!f.isValid) {
+                errorMsg.textContent = 'Invalid URL format. Please enter a proper web address (e.g., example.com or https://site.com).';
+                errorMsg.classList.remove('hidden');
+                resultCard.classList.add('hidden');
+                return;
+            }
+
+            const p = classifyUrl(f);
+            const ui = VERDICT_UI[p.verdict];
+            resultCard.classList.remove('hidden');
+
+            document.getElementById('scannedUrlText').textContent = urlInput;
+            document.getElementById('riskScoreText').textContent = `${p.riskScore}%`;
+
+            const badge = document.getElementById('badgeStatus');
+            badge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${ui.badge}`;
+            badge.textContent = ui.badgeText;
+            document.getElementById('resultTitle').textContent = ui.title;
+            document.getElementById('recommendationBox').className = `p-4 rounded-lg text-sm border flex items-start space-x-3 ${ui.box}`;
+            document.getElementById('recommendationIcon').className = `fa-solid ${ui.icon} text-lg mt-0.5`;
+            document.getElementById('recommendationTitle').textContent = ui.recTitle;
+            document.getElementById('recommendationText').textContent = ui.rec;
+
+            const yn = (v, bad = 'Yes') => (v ? bad : 'No');
+            document.getElementById('featuresGrid').innerHTML = [
+                ['URL Length', `${f.length} chars`, f.length > 54],
+                ['IP Address Host', yn(f.isIP), f.isIP],
+                ['@ Symbol Present', yn(f.hasAt), f.hasAt],
+                ["Extra '//' in URL", yn(f.doubleSlash), f.doubleSlash],
+                ['Hyphen in Domain', yn(f.hasHyphen), f.hasHyphen],
+                ['Protocol', f.isHttp ? 'HTTP (Insecure)' : 'HTTPS / not specified', f.isHttp],
+                ['Dots / Subdomains', `${f.dotCount} / ${f.subdomainCount}`, f.dotCount > 3 || f.subdomainCount >= 3],
+                ['Suspicious Keywords', f.keywordsFound.length ? f.keywordsFound.join(', ') : 'None', f.keywordsFound.length > 0],
+                ['Suspicious TLD', yn(f.suspiciousTld), f.suspiciousTld],
+                ['URL Shortener', yn(f.isShortener), f.isShortener],
+                ['Punycode (xn--)', yn(f.hasPunycode), f.hasPunycode],
+                ['Brand Look-alike', f.brandMisuse || 'No', !!f.brandMisuse],
+                ['Domain Entropy', f.entropy.toFixed(2), f.highEntropy],
+                ['In Blacklist', yn(f.blacklisted), f.blacklisted]
+            ].map(([l, v, flagged]) => renderFeatureBadge(l, v, flagged)).join('');
+
+            document.getElementById('reasonsList').innerHTML = p.reasons.length
+                ? p.reasons.map(r => `<li class="flex justify-between gap-3"><span>${escapeHtml(r.text)}</span><span class="font-mono text-red-400">+${r.pts}</span></li>`).join('')
+                : '<li class="text-slate-500">No risk factors contributed to the score.</li>';
+
+            saveToHistory(urlInput, p.verdict);
+        }
+
+        function renderFeatureBadge(label, val, isFlagged) {
+            return `
+                <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-700/60 flex items-center justify-between gap-3 text-xs">
+                    <span class="text-slate-400">${escapeHtml(label)}</span>
+                    <span class="font-mono font-medium text-right ${isFlagged ? 'text-red-400' : 'text-slate-200'}">${escapeHtml(val)}</span>
+                </div>`;
+        }
+
+        function saveToHistory(url, verdict) {
+            totalScans++;
+            if (verdict === 'Phishing') totalThreats++;
+            scanHistory.unshift({ url, verdict, time: new Date().toLocaleTimeString() });
+            if (scanHistory.length > 10) scanHistory.pop();
+            try {
+                localStorage.setItem('phish_scan_history', JSON.stringify(scanHistory));
+                localStorage.setItem('phish_total_scans', totalScans);
+                localStorage.setItem('phish_total_threats', totalThreats);
+            } catch (e) { /* storage unavailable */ }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const body = document.getElementById('historyTableBody');
+            body.replaceChildren();
+
+            if (scanHistory.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 2;
+                td.className = 'p-3 text-center text-slate-500';
+                td.textContent = 'No scans recorded yet';
+                tr.appendChild(td);
+                body.appendChild(tr);
+            } else {
+                const colors = { Phishing: 'text-red-400', Suspicious: 'text-amber-400', Clean: 'text-emerald-400', Safe: 'text-emerald-400' };
+                scanHistory.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const tdUrl = document.createElement('td');
+                    tdUrl.className = 'p-2 text-slate-300 truncate max-w-[180px]';
+                    tdUrl.textContent = String(item.url);
+                    tdUrl.title = String(item.url);
+                    const tdV = document.createElement('td');
+                    tdV.className = `p-2 text-right font-medium ${colors[item.verdict] || 'text-slate-300'}`;
+                    tdV.textContent = String(item.verdict);
+                    tr.append(tdUrl, tdV);
+                    body.appendChild(tr);
+                });
+            }
+
+            document.getElementById('totalScansCount').textContent = totalScans;
+            document.getElementById('threatsFoundCount').textContent = totalThreats;
+        }
+
+        function clearHistory() {
+            scanHistory = [];
+            totalScans = 0;
+            totalThreats = 0;
+            ['phish_scan_history', 'phish_total_scans', 'phish_total_threats'].forEach(k => {
+                try { localStorage.removeItem(k); } catch (e) {}
+            });
+            renderHistory();
+        }
+    </script>
+</body>
+</html>
